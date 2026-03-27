@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Zlatá Horečka - ULTIMATE EDITION</title>
+    <style>
+        /* * UŽIVATELSKÉ ROZHRANÍ (UI) A STYLOVÁNÍ
+         * Využívá moderní CSS vlastnosti jako backdrop-filter pro skleněný efekt (Glassmorphism),
+         * CSS proměnné a flexbox pro responzivní centrování modálního okna obchodu.
+         */
+        body { margin: 0; overflow: hidden; background: linear-gradient(to bottom, #4facfe 0%, #00f2fe 100%); font-family: 'Segoe UI', sans-serif; user-select: none; }
+        canvas { display: block; }
+        #ui { position: absolute; top: 20px; left: 20px; background: rgba(0, 0, 0, 0.6); color: white; padding: 15px; border-radius: 12px; border: 2px solid #ffd700; box-shadow: 0 4px 15px rgba(0,0,0,0.5); backdrop-filter: blur(5px); pointer-events: none; }
+        .stat { margin-bottom: 5px; font-size: 18px; font-weight: bold; text-shadow: 1px 1px 2px black; }
+        .stat span { color: #ffd700; font-size: 22px; }
+        #healthContainer { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 300px; text-align: center; z-index: 10; }
+        #healthBarBg { background: rgba(0,0,0,0.5); border: 3px solid #222; border-radius: 20px; height: 25px; position: relative; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        #healthBarFill { background: linear-gradient(90deg, #ff0844 0%, #ffb199 100%); height: 100%; width: 100%; transition: width 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        #hpText { position: absolute; top: 2px; left: 0; width: 100%; color: white; font-weight: bold; font-size: 16px; text-shadow: 1px 1px 2px black; pointer-events: none; }
+        #shopBtn { position: absolute; top: 20px; right: 20px; background: linear-gradient(to bottom, #ffe000, #799f0c); border: 2px solid white; color: white; text-shadow: 1px 1px 2px black; padding: 12px 24px; font-size: 18px; font-weight: bold; border-radius: 12px; cursor: pointer; box-shadow: 0 6px 15px rgba(0,0,0,0.4); transition: all 0.2s; z-index: 10; }
+        #shopBtn:hover { transform: translateY(-3px) scale(1.05); box-shadow: 0 8px 20px rgba(0,0,0,0.6); }
+        #shopModal { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 80%; max-width: 800px; background: rgba(30, 30, 30, 0.95); border-radius: 20px; border: 4px solid #555; box-shadow: 0 20px 50px rgba(0,0,0,0.9); z-index: 100; flex-direction: column; align-items: center; color: white; padding: 30px; box-sizing: border-box; backdrop-filter: blur(10px); }
+        #closeShop { position: absolute; top: 15px; right: 25px; font-size: 35px; cursor: pointer; color: #ff5555; font-weight: bold; transition: color 0.2s; }
+        #closeShop:hover { color: #ff1111; }
+        .shop-items { display: flex; justify-content: space-around; gap: 20px; width: 100%; margin-top: 30px; }
+        .item { background: linear-gradient(145deg, #444, #222); padding: 20px; border-radius: 15px; text-align: center; flex: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center; border: 1px solid #666; box-shadow: inset 0 2px 10px rgba(255,255,255,0.1); }
+        .item svg { width: 70px; height: 70px; margin-bottom: 15px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.5)); }
+        .item button { background: linear-gradient(to right, #11998e, #38ef7d); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-size: 16px; width: 100%; font-weight: bold; text-shadow: 1px 1px 1px rgba(0,0,0,0.5); transition: transform 0.1s; }
+        .item button:hover { transform: scale(1.05); }
+        .item button:active { transform: scale(0.95); }
+        #flash { position: absolute; top:0; left:0; width:100%; height:100%; background: #ff0000; opacity: 0; pointer-events: none; transition: opacity 0.1s; z-index: 50; }
+        #startScreen { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; flex-direction: column; color: white; z-index: 200; }
+        #startScreen h1 { font-size: 50px; color: #ffd700; text-shadow: 0 0 20px #ffaa00; margin-bottom: 10px; }
+        #startScreen p { font-size: 20px; margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+<div id="startScreen" onclick="startGame()">
+    <h1>Zlatá Horečka</h1>
+    <p>Klikni kamkoliv nebo stiskni klávesu pro start (zapne se zvuk)</p>
+    <p style="font-size: 16px; color: #aaa;">Šipky / WASD pro pohyb • Mezerník pro skok</p>
+</div>
+
+<div id="ui">
+    <div class="stat">Vzdálenost: <span id="distance">0</span> m</div>
+    <div class="stat">Mince: <span id="money">0</span></div>
+</div>
+
+<div id="healthContainer">
+    <div id="healthBarBg"><div id="healthBarFill"></div><div id="hpText"><span id="currentHp">100</span> / <span id="maxHp">100</span> HP</div></div>
+</div>
+
+<button id="shopBtn">🛒 Obchod</button>
+
+<div id="shopModal">
+    <div id="closeShop">✕</div>
+    <h1 style="margin: 0; text-shadow: 0 0 10px rgba(255,255,255,0.5);">Černý Trh</h1>
+    <div style="color: #ffd700; font-size: 20px; margin-top: 10px;">Tvoje mince: <span id="shopMoney">0</span></div>
+    
+    <div class="shop-items">
+        <div class="item">
+            <svg viewBox="0 0 100 100">
+                <path d="M 10 30 L 30 30 M 5 50 L 25 50 M 15 70 L 35 70" stroke="#00ffff" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+                <circle cx="60" cy="25" r="10" fill="none" stroke="white" stroke-width="4"/><path d="M 60 35 L 70 60 M 70 60 L 50 85 M 70 60 L 85 80 M 60 40 L 45 50 M 60 40 L 75 45" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+            </svg>
+            <h2>Turbo Běh</h2><p>Zvýší rychlost (x1.25)</p><button onclick="buyUpgrade('speed')">50 mincí</button>
+        </div>
+        <div class="item">
+            <svg viewBox="0 0 100 100">
+                <path d="M 30 90 L 30 70 M 50 95 L 50 75 M 70 90 L 70 70" stroke="#ffaa00" stroke-width="4" stroke-linecap="round" opacity="0.8"/>
+                <circle cx="50" cy="20" r="10" fill="none" stroke="white" stroke-width="4"/><path d="M 50 30 L 50 55 M 50 55 L 35 65 M 50 55 L 65 65 M 50 35 L 35 25 M 50 35 L 65 25" stroke="white" stroke-width="4" stroke-linecap="round" fill="none"/>
+            </svg>
+            <h2>Pružiny</h2><p>Vyšší skok (x1.1)</p><button onclick="buyUpgrade('jump')">50 mincí</button>
+        </div>
+        <div class="item">
+            <svg viewBox="0 0 100 100">
+                <path d="M 50 80 C 50 80 10 50 10 30 C 10 15 30 10 50 30 C 70 10 90 15 90 30 C 90 50 50 80 50 80 Z" fill="#ff3333" filter="drop-shadow(0 0 5px red)"/>
+                <path d="M 50 35 L 50 55 M 40 45 L 60 45" stroke="white" stroke-width="6" stroke-linecap="round"/>
+            </svg>
+            <h2>Lékárnička</h2><p>+10 Max HP & Heal</p><button onclick="buyUpgrade('health')">50 mincí</button>
+        </div>
+    </div>
+</div>
+
+<div id="flash"></div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+
+/*
+ * ALGORITMICKÉ GENEROVÁNÍ ZVUKU (Web Audio API)
+ * Audio engine hry je postaven čistě na nativním Web Audio API, což eliminuje nutnost 
+ * stahovat jakékoliv externí zvukové soubory (MP3, WAV). Zvuky jsou syntetizovány v reálném čase 
+ * prostřednictvím elektronických oscilátorů. Změnou typu vlny (sinusoida pro měkký skok, 
+ * čtvercová vlna pro "retro" cinknutí mince) a bleskovou manipulací s frekvencí a hlasitostí 
+ * (pomocí GainNode) generuje kód bohatou paletu zvukových efektů s nulovou latencí.
+ */
+let audioCtx;
+function initAudio() { if(!audioCtx) { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } if(audioCtx.state === 'suspended') audioCtx.resume(); }
+function playSound(type) {
+    if(!audioCtx) return;
+    const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    
+    if(type === 'jump') {
+        osc.type = 'sine'; osc.frequency.setValueAtTime(300, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(600, audioCtx.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    } else if(type === 'coin') {
+        osc.type = 'square'; osc.frequency.setValueAtTime(900, audioCtx.currentTime); osc.frequency.setValueAtTime(1200, audioCtx.currentTime + 0.05);
+        gain.gain.setValueAtTime(0.1, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    } else if(type === 'hit') {
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, audioCtx.currentTime); osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.3, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+    } else if(type === 'buy') {
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(400, audioCtx.currentTime); osc.frequency.setValueAtTime(600, audioCtx.currentTime + 0.1); osc.frequency.setValueAtTime(800, audioCtx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime); gain.gain.linearRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+    }
+}
+
+/*
+ * POKROČILÝ FYZIKÁLNÍ MODEL A KINEMATIKA
+ * Pohyb postavy nevyužívá pevné souřadnice, ale komplexní kinematický model s vektory rychlosti.
+ * Na postavu působí akcelerace (plynulý rozjezd), tření (friction - plynulé zastavení) 
+ * a vertikální gravitace pro realistické křivky skoku. Rychlost je limitována baseMaxSpeed.
+ */
+let gameStarted = false; let isPaused = false; let distance = 0; let money = 0; let screenShake = 0; let frames = 0;
+let playerStats = { hp: 100, maxHp: 100, baseMaxSpeed: 5, acceleration: 0.4, baseJump: 12 }; 
+const config = { grassPct: 0.07, dirtPct: 0.35, gravity: 0.65, friction: 0.85 }; 
+
+const groundY = canvas.height * (1 - (config.grassPct + config.dirtPct));
+const dirtY = canvas.height * (1 - config.dirtPct);
+
+const player = { x: 200, y: groundY - 60, w: 30, h: 60, velX: 0, velY: 0, grounded: false, walkFrame: 0, invulnerable: false };
+
+let particles = [];
+let floatTexts = [];
+function addParticle(x, y, color, speed, sizeObj) {
+    particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * speed, vy: (Math.random() - 1) * speed, life: 1, color: color, size: Math.random() * sizeObj + 2 });
+}
+function addFloatText(x, y, text, color) {
+    floatTexts.push({ x: x, y: y, text: text, color: color, life: 1, vy: -1.5 });
+}
+
+let mountainPeaks = [];
+let nextMountainX = 0;
+function generateMountains(limitX) {
+    while (nextMountainX < limitX) {
+        let h = 150 + Math.random() * 200;
+        let w = 300 + Math.random() * 300;
+        mountainPeaks.push({ x: nextMountainX, y: groundY - h, w: w, h: h });
+        nextMountainX += w * 0.6;
+    }
+}
+generateMountains(canvas.width * 2);
+
+const clouds = Array.from({ length: 8 }, () => ({ x: Math.random() * canvas.width * 2, y: Math.random() * (canvas.height * 0.3), s: Math.random() * 0.5 + 0.5, speed: Math.random() * 0.3 + 0.1, parallax: 0.15 }));
+let items = [];
+let lastSpawnX = 600; let cameraX = 0;
+
+/*
+ * OPTIMALIZACE VYKRESLOVÁNÍ A PRE-RENDERING TEXTUR
+ * Pro zamezení "lagování" při vykreslování hlíny je využita technika kešování (Pre-rendering).
+ * Textura se algoritmicky vygeneruje pouze jednou při startu na skryté plátno (Canvas Pattern).
+ * Během herní smyčky se pak celá plocha pouze efektivně "vytapetuje" tímto hotovým vzorem,
+ * což dramaticky snižuje zátěž procesoru (Draw Calls) a zajišťuje hladký chod.
+ */
+let dirtPattern;
+function createDirtPattern() {
+    const patternCanvas = document.createElement('canvas');
+    const patternCtx = patternCanvas.getContext('2d');
+    const blockSize = 8; 
+    const patternSize = 256; 
+    patternCanvas.width = patternSize;
+    patternCanvas.height = patternSize;
+
+    for(let y = 0; y < patternSize; y += blockSize) {
+        for(let x = 0; x < patternSize; x += blockSize) {
+            patternCtx.fillStyle = Math.random() > 0.8 ? '#522e18' : (Math.random() > 0.5 ? '#63391d' : '#5a331a');
+            patternCtx.fillRect(x, y, blockSize, blockSize);
+        }
+    }
+    dirtPattern = ctx.createPattern(patternCanvas, 'repeat');
+}
+setTimeout(createDirtPattern, 10);
+
+// OVLÁDÁNÍ
+const keys = {};
+window.onkeydown = e => {
+    if(!gameStarted) startGame();
+    if(isPaused) return;
+    keys[e.code] = true;
+    if((e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') && player.grounded) {
+        player.velY = -playerStats.baseJump; player.grounded = false; playSound('jump');
+        for(let i=0; i<10; i++) addParticle(player.x + 15, groundY, '#555', 4, 3);
+    }
+};
+window.onkeyup = e => keys[e.code] = false;
+function startGame() { gameStarted = true; document.getElementById('startScreen').style.display = 'none'; initAudio(); update(); }
+
+// OBCHOD A STATE MANAGEMENT
+document.getElementById('shopBtn').onclick = () => { isPaused = true; document.getElementById('shopModal').style.display = 'flex'; document.getElementById('shopMoney').innerText = money; };
+document.getElementById('closeShop').onclick = () => { isPaused = false; document.getElementById('shopModal').style.display = 'none'; update(); };
+window.buyUpgrade = function(type) {
+    if(money >= 50) {
+        money -= 50; playSound('buy');
+        if(type === 'speed') { playerStats.baseMaxSpeed *= 1.25; playerStats.acceleration *= 1.15; }
+        if(type === 'jump') playerStats.baseJump *= 1.1;
+        if(type === 'health') { playerStats.maxHp += 10; playerStats.hp = playerStats.maxHp; updateHealthBar(); }
+        document.getElementById('money').innerText = money; document.getElementById('shopMoney').innerText = money;
+        addFloatText(player.x, player.y - 40, "UPGRADE!", "#55ff55");
+    }
+};
+
+function updateHealthBar() {
+    document.getElementById('currentHp').innerText = playerStats.hp; document.getElementById('maxHp').innerText = playerStats.maxHp;
+    document.getElementById('healthBarFill').style.width = ((playerStats.hp / playerStats.maxHp) * 100) + '%';
+    if(playerStats.hp <= 0) location.reload();
+}
+
+// LOGIKA A PROCEDURÁLNÍ GENEROVÁNÍ
+function spawnWorld() {
+    if (cameraX + canvas.width > lastSpawnX) {
+        let gap = 200 + Math.random() * 250;
+        let rand = Math.random();
+        
+        if (rand < 0.5) { 
+            items.push({ type: Math.random() > 0.5 ? 'stone' : 'spike', x: lastSpawnX + gap, y: groundY, w: 40 + Math.random()*20, h: 40 + Math.random()*20, passed: false });
+        } else if (rand < 0.7) { 
+            for(let i=0; i<3; i++) items.push({ type: 'coin', x: lastSpawnX + gap + i*40, y: groundY - 60 - Math.sin(i)*50, w: 20, h: 20, collected: false });
+        } else { 
+            items.push({ type: 'block', x: lastSpawnX + gap, y: dirtY + 30 + Math.random()*50, w: 35, h: 35, active: true });
+        }
+        lastSpawnX += gap;
+    }
+}
+
+/*
+ * ARCHITEKTURA ENGINU A HERNÍ SMYČKA (Game Loop)
+ * Smyčka je řízena přes requestAnimationFrame pro synchronizaci s monitorem (60 Hz).
+ * Striktně odděluje fázi update() (přepočet fyziky, kolizí a garbage collection) 
+ * od fáze draw() (samotné vykreslení pixelů). Toto oddělení zaručuje stabilitu.
+ */
+function update() {
+    if (isPaused) return; frames++;
+
+    // Výpočet pohybu a kinematiky
+    if(keys['ArrowLeft'] || keys['KeyA']) player.velX -= playerStats.acceleration;
+    if(keys['ArrowRight'] || keys['KeyD']) player.velX += playerStats.acceleration;
+    
+    player.velX *= config.friction; // Aplikace tření
+    
+    if(player.velX > playerStats.baseMaxSpeed) player.velX = playerStats.baseMaxSpeed;
+    if(player.velX < -playerStats.baseMaxSpeed) player.velX = -playerStats.baseMaxSpeed;
+
+    player.x += player.velX; player.velY += config.gravity; player.y += player.velY;
+    player.walkFrame += player.velX * 0.05; cameraX = player.x - canvas.width * 0.3;
+
+    distance = Math.floor(Math.max(0, player.x - 200) / 50);
+    document.getElementById('distance').innerText = distance;
+
+    if(player.grounded && Math.abs(player.velX) > 1 && frames % 5 === 0) {
+        addParticle(player.x + 15 - Math.sign(player.velX)*10, groundY, 'rgba(100, 60, 30, 0.5)', 2, 2);
+    }
+
+    if(player.y > groundY - 60) {
+        if(!player.grounded) { for(let i=0; i<8; i++) addParticle(player.x+15, groundY, '#555', 3, 2); } 
+        player.y = groundY - 60; player.velY = 0; player.grounded = true;
+    }
+
+    spawnWorld();
+    generateMountains(cameraX + canvas.width * 2);
+
+    // Detekce kolizí (Hitboxy)
+    items.forEach(o => {
+        if(o.type === 'stone' || o.type === 'spike') {
+            if(!o.passed && player.x > o.x + o.w) { o.passed = true; money += 5; document.getElementById('money').innerText = money; }
+            
+            let hit = false;
+            if (o.type === 'stone') { 
+                hit = player.x + player.w - 15 > o.x && player.x + 15 < o.x + o.w && player.y + player.h > groundY - o.h + 10 && player.y < groundY;
+            } else { 
+                hit = player.x + player.w - 10 > o.x && player.x + 10 < o.x + o.w && player.y + player.h > groundY - o.h && player.y < groundY;
+            }
+
+            if(!player.invulnerable && hit) {
+                playerStats.hp -= 10; updateHealthBar(); player.invulnerable = true; screenShake = 15; playSound('hit');
+                addFloatText(player.x, player.y - 20, "-10 HP", "#ff3333");
+                document.getElementById('flash').style.opacity = 0.6; setTimeout(() => document.getElementById('flash').style.opacity = 0, 100);
+                setTimeout(() => player.invulnerable = false, 1500);
+            }
+        }
+        else if(o.type === 'coin' && !o.collected) {
+            if(player.x + player.w > o.x && player.x < o.x + o.w && player.y + player.h > o.y && player.y < o.y + o.h) {
+                o.collected = true; money += 10; document.getElementById('money').innerText = money; playSound('coin');
+                addFloatText(o.x, o.y, "+10", "#ffd700");
+                for(let i=0; i<5; i++) addParticle(o.x+10, o.y+10, '#ffd700', 3, 3);
+            }
+        }
+        else if(o.type === 'block' && o.active) {
+            if(player.x + player.w > o.x && player.x < o.x + o.w && player.y + player.h > o.y && player.y < o.y + o.h) {
+                o.active = false; money += 30; document.getElementById('money').innerText = money; playSound('coin');
+                addFloatText(o.x, o.y, "POKLAD!", "#ffd700");
+                for(let i=0; i<15; i++) addParticle(o.x+15, o.y+10, '#ffd700', 5, 4);
+            }
+        }
+    });
+
+    /*
+     * SPRÁVA PAMĚTI A PARTICLE SYSTÉM (Garbage Collection)
+     * Zásadní krok pro prevenci memory leaků. Kód aktivně filtruje pole objektů
+     * a trvale odstraňuje částice, jejichž 'life' klesl pod nulu.
+     */
+    particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += 0.1; p.life -= 0.03; });
+    particles = particles.filter(p => p.life > 0);
+    floatTexts.forEach(t => { t.y += t.vy; t.life -= 0.02; });
+    floatTexts = floatTexts.filter(t => t.life > 0);
+
+    draw(); requestAnimationFrame(update);
+}
+
+// --- VYKRESLOVÁNÍ (Draw Phase) ---
+function drawCloud(ctx, x, y, scale) { ctx.beginPath(); ctx.arc(x, y, 30*scale, Math.PI*0.5, Math.PI*1.5); ctx.arc(x+25*scale, y-15*scale, 35*scale, Math.PI*1, Math.PI*2); ctx.arc(x+60*scale, y-10*scale, 30*scale, Math.PI*1.2, Math.PI*2); ctx.arc(x+80*scale, y, 25*scale, Math.PI*1.5, Math.PI*0.5); ctx.closePath(); ctx.fill(); }
+
+function draw() {
+    ctx.clearRect(0,0,canvas.width, canvas.height);
+    ctx.save();
+    
+    if(screenShake > 0) { ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake); screenShake--; }
+
+    ctx.fillStyle = "#ffdd00"; ctx.beginPath(); ctx.arc(canvas.width - 100, 100, 40, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = "rgba(255, 221, 0, 0.3)"; ctx.beginPath(); ctx.arc(canvas.width - 100, 100, 60 + Math.sin(frames*0.05)*10, 0, Math.PI*2); ctx.fill();
+
+    // Hory v pozadí (Parallax)
+    ctx.fillStyle = "#4a6984";
+    mountainPeaks.forEach(m => {
+        let drawX = m.x - cameraX * 0.05;
+        if (drawX + m.w > -100 && drawX < canvas.width + 100) {
+            ctx.beginPath(); ctx.moveTo(drawX, groundY); ctx.lineTo(drawX + m.w/2, m.y); ctx.lineTo(drawX + m.w, groundY); ctx.fill();
+        }
+    });
+
+    // Mraky
+    ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+    clouds.forEach(c => {
+        c.x -= c.speed; let drawX = (c.x - cameraX * c.parallax) % (canvas.width + 300);
+        if (drawX < -200) drawX += (canvas.width + 300);
+        drawCloud(ctx, drawX, c.y, c.s);
+    });
+
+    // Vykreslení pre-renderované textury hlíny
+    if (dirtPattern) {
+        ctx.save();
+        ctx.translate(-cameraX, groundY); 
+        ctx.fillStyle = dirtPattern;
+        ctx.fillRect(cameraX, 0, canvas.width, canvas.height * config.dirtPct + 100);
+        ctx.restore();
+    }
+    
+    // Gradientní tráva
+    let grassGrad = ctx.createLinearGradient(0, groundY, 0, groundY + canvas.height * config.grassPct);
+    grassGrad.addColorStop(0, "#3a7d32"); grassGrad.addColorStop(1, "#1c4418");
+    ctx.fillStyle = grassGrad; ctx.fillRect(0, groundY, canvas.width, canvas.height * config.grassPct);
+    
+    ctx.fillStyle = "#4caf50";
+    const startGrass = Math.floor(cameraX / 20);
+    for(let i = -1; i < canvas.width/20 + 2; i++) {
+        ctx.beginPath(); ctx.moveTo((startGrass + i)*20 - cameraX, groundY + 5); ctx.lineTo((startGrass + i)*20 - cameraX + 5, groundY - 5); ctx.lineTo((startGrass + i)*20 - cameraX + 10, groundY + 5); ctx.fill();
+    }
+
+    // Objekty
+    items.forEach(o => {
+        let drawX = o.x - cameraX;
+        if (drawX > -100 && drawX < canvas.width + 100) {
+            if(o.type === 'stone') {
+                ctx.fillStyle = '#555'; 
+                ctx.beginPath();
+                ctx.moveTo(drawX + 5, groundY);
+                ctx.bezierCurveTo(drawX - 10, groundY - o.h, drawX + o.w + 10, groundY - o.h, drawX + o.w - 5, groundY);
+                ctx.fill();
+                ctx.fillStyle = '#777'; ctx.beginPath(); 
+                ctx.ellipse(drawX + o.w/3, groundY - o.h/2, o.w/4, o.h/5, Math.PI/4, 0, Math.PI*2); ctx.fill();
+            } else if(o.type === 'spike') {
+                ctx.fillStyle = '#111'; 
+                let numSpikes = 3;
+                let spikeW = o.w / numSpikes;
+                for(let i=0; i<numSpikes; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(drawX + i*spikeW, groundY);
+                    ctx.lineTo(drawX + i*spikeW + spikeW/2, groundY - o.h);
+                    ctx.lineTo(drawX + (i+1)*spikeW, groundY);
+                    ctx.fill();
+                }
+            } else if(o.type === 'coin' && !o.collected) {
+                ctx.fillStyle = '#ffd700'; ctx.beginPath(); ctx.arc(drawX+10, o.y+10, 10, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#fffefa'; ctx.beginPath(); ctx.arc(drawX+7, o.y+7, 3, 0, Math.PI*2); ctx.fill();
+            } else if(o.type === 'block' && o.active) {
+                ctx.fillStyle = "#8B4513"; ctx.fillRect(drawX, o.y, o.w, o.h); 
+                ctx.fillStyle = "#ffd700"; ctx.shadowBlur = 10; ctx.shadowColor = "yellow";
+                for(let i=0; i<3; i++) { 
+                    ctx.fillRect(drawX + 5 + Math.random()*(o.w-10), o.y + 5 + Math.random()*(o.h-10), 5, 5);
+                }
+                ctx.shadowBlur = 0;
+            }
+        }
+    });
+
+    particles.forEach(p => { ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x - cameraX, p.y, p.size, 0, Math.PI*2); ctx.fill(); }); ctx.globalAlpha = 1;
+    
+    // Stickman
+    const px = player.x - cameraX; const py = player.y;
+    if (player.invulnerable && Math.floor(Date.now() / 100) % 2 === 0) ctx.strokeStyle = "rgba(0,0,0,0.3)"; else ctx.strokeStyle = "#111";
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.lineWidth = 5;
+    let animMove = 0, bobY = 0;
+    if (Math.abs(player.velX) > 0.5 && player.grounded) { animMove = Math.sin(player.walkFrame) * 20; bobY = Math.abs(Math.sin(player.walkFrame * 2)) * 5; }
+    
+    ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(px + 15, groundY, 15 - bobY/2, 4, 0, 0, Math.PI*2); ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(px + 15, py + 12 - bobY, 10, 0, Math.PI * 2); 
+    ctx.moveTo(px + 15, py + 22 - bobY); ctx.lineTo(px + 15, py + 40 - bobY); 
+    ctx.moveTo(px + 15, py + 26 - bobY); ctx.lineTo(px + 15 - animMove * 0.8, py + 38 - bobY); 
+    ctx.moveTo(px + 15, py + 26 - bobY); ctx.lineTo(px + 15 + animMove * 0.8, py + 38 - bobY); 
+    ctx.moveTo(px + 15, py + 40 - bobY); ctx.lineTo(px + 15 + animMove, py + 60); 
+    ctx.moveTo(px + 15, py + 40 - bobY); ctx.lineTo(px + 15 - animMove, py + 60); 
+    ctx.stroke();
+
+    ctx.font = "bold 20px 'Segoe UI'"; ctx.textAlign = "center";
+    floatTexts.forEach(t => { ctx.globalAlpha = t.life; ctx.fillStyle = "black"; ctx.fillText(t.text, t.x - cameraX + 2, t.y + 2); ctx.fillStyle = t.color; ctx.fillText(t.text, t.x - cameraX, t.y); });
+    ctx.globalAlpha = 1; ctx.textAlign = "left";
+
+    ctx.restore();
+}
+
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
+updateHealthBar();
+</script>
+</body>
+</html>
