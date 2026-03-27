@@ -1,4 +1,4 @@
-# 🏃‍♂️ Zlatá Horečka: Nekonečná cesta
+# Příručka hry
 
 Vítejte na startovní čáře. 
 
