@@ -5,7 +5,7 @@
 
 ### Tým - stickman 1.1
 * Zpracoval Pavel Janouch
-* Vypomáhal Matěj Haruda
+* Mwnší asistence - Matěj Haruda
 
 ### Tým - sitkcman 1.3
 * Zpracoval Paevl Janouch
