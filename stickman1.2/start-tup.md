@@ -8,5 +8,5 @@
 * Menší asistence - Matěj Haruda
 
 ### Tým - sitkcman 1.3
-* Zpracoval Paevl Janouch
+* Zpracoval Pavel Janouch
 * Vypomáhal
